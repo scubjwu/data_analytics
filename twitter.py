@@ -7,6 +7,10 @@ import json
 from pymongo import MongoClient
 from bson import Binary, Code
 from bson.json_util import dumps
+import bson
+import collections
+from bson.codec_options import CodecOptions
+import threading
 
 class twitter_T:
 	ckey = ""
@@ -30,7 +34,7 @@ class twitter_T:
 		#init the api handler
 		auth = tweepy.OAuthHandler(self.ckey, self.csecret)
 		auth.set_access_token(self.atoken, self.asecret)
-		twitter_T.t_api = tweepy.API(auth_handler=auth)
+		twitter_T.t_api = tweepy.API(auth_handler=auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
 	#def __del__(self):
 	#	twitter_T.twitter_cnt -= 1
@@ -45,13 +49,14 @@ class twitter_T:
 		tmp = tweepy.Cursor(self.t_api.followers_ids, user_id).pages()
 		while True:
 			try:
-				page = tmp.next()
-				lst.extend(page)
+			    page = tmp.next()
+			    lst.extend(page)
 			except tweepy.TweepError:
-				time.sleep(10)
-				continue
+			    time.sleep(60*15)
+                            print "!ERROR:when extract friends list: %d" % tweepy.TweepError
+			    continue
 			except StopIteration:
-				break
+			    break
 		
 		return lst
 	
@@ -60,47 +65,104 @@ class twitter_T:
 		tmp = tweepy.Cursor(self.t_api.friends_ids, user_id).pages()
 		while True:
 			try:
-				page = tmp.next()
-				lst.extend(page)
+			    page = tmp.next()
+			    lst.extend(page)
 			except tweepy.TweepError:
-				time.sleep(10)
-				continue
+			    time.sleep(60*15)
+                            print "!ERROR:when extract friends list: %d" % tweepy.TweepError
+			    continue
 			except StopIteration:
-				break
+			    break
 		return lst
 
-#testing......
+#=================================global infor=======================================#
 my_ckey = "donoBSHOjnHt4YPG3avSmUvro"
 my_csecret = "RARzNyiPPkg8U6DBXofQM4sbrERiz7xPFii9bJXi7RVm79IFpO"
 my_atoken = "2509388425-pZiEKSsbY4rIlCVr0Zl6N6LU5ICRdz283ACu9is"
 my_asecret = "7EGL5FXVkwZICn8sIjxxkTBCOSs7oEvLJTAvpCdsTvDcZ"
+my_twitter = twitter_T('t_user', my_ckey, my_csecret, my_atoken, my_asecret)
 
-test = twitter_T('test', my_ckey, my_csecret, my_atoken, my_asecret)
+client_user = MongoClient()
+db_user = pymongo.database.Database(client_user, "test")
+collection_user = pymongo.collection.Collection(db_user, "user_NYC")
+collection_user.create_index("user_id")
 
-test.twitter_DB('test', 't_NYC')
-res = test.collection.find_one({"id_str":"636433425336037376"})
-res_json = dumps(res)
+db_lock = threading.Lock()
+#======================================================================================#
 
-user_info = res['user']
-#print(res)
+def process_document(document):
+    user_info = document['user']
 
-#test.collection.create_index("id_str")
+    user_id = json.loads(user_info['id_str'])
+    res = None
 
-lst_fr = test.followers_lst(user_info['id_str'])
-#print "friends lst: ",  lst_fr
+    with db_lock:
+        res = collection_user.find_one({'user_id':user_id})
 
-user_test = {}
-user_test['user_id'] = user_info['id_str']
-user_test['friends_id'] = lst_fr
-print user_test
+    if res is not None:
+        return
 
-#res1 = test.collection.find_one({"id_str":"0"})
-#print res1
-#lst_fo = test.friends_lst("2355933535")
+    lst_fo = my_twitter.followers_lst(user_id)
+    lst_fr = my_twitter.friends_lst(user_id)
 
-#print "follower lst: ", lst_fo
+    new_doc = {}
+    new_doc['user_id'] = user_id
+    new_doc['friends_id'] = lst_fr
+    new_doc['followers_id'] = lst_fo
+
+    with db_lock:
+        res = collection_user.find_one({'user_id':user_id})
+        if res is None:
+            print "insert a new doc..."
+            collection_user.insert_one(new_doc)
+
+def process_cursor(cursor):
+    for document in cursor:
+        process_document(document)
+
+def main():
+    my_twitter.twitter_DB('test', 'tweet_NYC')
+    cursors = my_twitter.collection.parallel_scan(4)
+    threads = [
+            threading.Thread(target=process_cursor, args=(cursor,))
+            for cursor in cursors]
+
+    print "Start..."
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    print "Done!"
+
+if __name__ == '__main__':
+    main()
 
 """
+my_twitter.twitter_DB('test', 'tweet_NYC')
+res = my_twitter.collection.find_one({"id_str":"636433425336037376"})
+#extract and construct the followers and friends infor of this user
+user_info = res['user']
+user_id = json.loads(user_info['id_str'])
+lst_fo = my_twitter.followers_lst(user_id)
+lst_fr = my_twitter.friends_lst(user_id)
+
+user_test = {}
+user_test['user_id'] = user_id
+user_test['friends_id'] = lst_fr
+user_test['followers_id'] = lst_fo
+print user_test
+
+#insert this user info if it is new
+#res = collection_user.find_one({'user_id':user_id})
+#if res is None:
+#    collection_user.insert_one(user_test)
+#    print "insert a new element"
+#else:
+#    print res
+
 def process_cursor(cursor):
 	for document in cursor:
 
