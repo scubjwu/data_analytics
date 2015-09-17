@@ -52,8 +52,8 @@ class twitter_T:
 			    page = tmp.next()
 			    lst.extend(page)
 			except tweepy.TweepError:
+                            print "!ERROR:when extract friends list: ", tweepy.TweepError
 			    time.sleep(60*15)
-                            print "!ERROR:when extract friends list: %d" % tweepy.TweepError
 			    continue
 			except StopIteration:
 			    break
@@ -68,18 +68,18 @@ class twitter_T:
 			    page = tmp.next()
 			    lst.extend(page)
 			except tweepy.TweepError:
+                            print "!ERROR:when extract friends list: ", tweepy.TweepError
 			    time.sleep(60*15)
-                            print "!ERROR:when extract friends list: %d" % tweepy.TweepError
 			    continue
 			except StopIteration:
 			    break
 		return lst
 
 #=================================global infor=======================================#
-my_ckey = "donoBSHOjnHt4YPG3avSmUvro"
-my_csecret = "RARzNyiPPkg8U6DBXofQM4sbrERiz7xPFii9bJXi7RVm79IFpO"
-my_atoken = "2509388425-pZiEKSsbY4rIlCVr0Zl6N6LU5ICRdz283ACu9is"
-my_asecret = "7EGL5FXVkwZICn8sIjxxkTBCOSs7oEvLJTAvpCdsTvDcZ"
+my_ckey = "veCUf9FagS16QmG0PWkXRVMLa"
+my_csecret = "iX6GSn8NG6GeBGDT7OUKYmOmlnCGUlj8cOQn91ebHjXEwtAybY"
+my_atoken = "2509388425-H2EXibllWS0jfp3N0ShOiPJxnGSAuet5EOM7b25"
+my_asecret = "DnNO0S1DHYsrBofYZGdJlbWpxctTfNS2mjtynyxpfXyQp"
 my_twitter = twitter_T('t_user', my_ckey, my_csecret, my_atoken, my_asecret)
 
 client_user = MongoClient()
@@ -89,7 +89,6 @@ collection_user.create_index("user_id")
 
 db_lock = threading.Lock()
 #======================================================================================#
-
 def process_document(document):
     user_info = document['user']
 
@@ -162,7 +161,6 @@ print user_test
 #    print "insert a new element"
 #else:
 #    print res
-
 def process_cursor(cursor):
 	for document in cursor:
 
