@@ -11,6 +11,7 @@ import bson
 import collections
 from bson.codec_options import CodecOptions
 import threading
+import csv
 
 class twitter_T:
 	def __init__(self, name, ckey, csecret, atoken, asecret):
@@ -64,50 +65,19 @@ class twitter_T:
 			    break
 		return lst
 
+def twitter_init(lst):
+    with open("auth_info.csv") as fp:
+        line = csv.reader(fp, delimiter=',')
+        for row in line:
+            ckey = row[0]
+            csecret = row[1]
+            atoken = row[2]
+            asecret = row[3]
+            twitter = twitter_T('user_info', ckey, csecret, atoken, asecret)
+            lst.append(twitter)
+
 #=================================global infor=======================================#
 my_twitter = []
-
-ckey0 = "OVJ62utfPINH1tjJlX3gACqAo"
-csecret0 = "W0zw7Y4zWATZwRiBKeVLsHNTHwrbui1IekH9f5vqInRXEHyutM"
-atoken0 = "3688208117-QDc0CWpLe24EETnKDVZ28G6pCv7Md53A50Bb5Uk"
-asecret0 = "3MG2tAHiraigWwX5U3nq0ECDqDFMjuRrEm66DpD7rLwyj"
-twitter0 = twitter_T('t_user0', ckey0, csecret0, atoken0, asecret0)
-my_twitter.append(twitter0)
-
-ckey1 = "donoBSHOjnHt4YPG3avSmUvro"
-csecret1 = "RARzNyiPPkg8U6DBXofQM4sbrERiz7xPFii9bJXi7RVm79IFpO"
-atoken1 = "2509388425-pZiEKSsbY4rIlCVr0Zl6N6LU5ICRdz283ACu9is"
-asecret1 = "7EGL5FXVkwZICn8sIjxxkTBCOSs7oEvLJTAvpCdsTvDcZ"
-twitter1 = twitter_T('t_user1', ckey1, csecret1, atoken1, asecret1)
-my_twitter.append(twitter1)
-
-ckey2 = "7nWywVmFealeMvswit3q8gmK0"
-csecret2 = "dGCzEqccsMadjlJaF1wdLXYVarGfUmYOGdsAlT4d2Fng3uRXAh"
-atoken2 = "3688208117-wgKdmVnCFuMkIJT5U8NzUKKuBhpX6G5xy45zFBW"
-asecret2 = "Twytg9TkwByuXU2YllAwFWcZKRO7xbAMKY8MpgSa6bUKu"
-twitter2 = twitter_T('t_user2', ckey2, csecret2, atoken2, asecret2)
-my_twitter.append(twitter2)
-
-ckey3 = "veCUf9FagS16QmG0PWkXRVMLa"
-csecret3 = "iX6GSn8NG6GeBGDT7OUKYmOmlnCGUlj8cOQn91ebHjXEwtAybY"
-atoken3 = "2509388425-H2EXibllWS0jfp3N0ShOiPJxnGSAuet5EOM7b25"
-asecret3 = "DnNO0S1DHYsrBofYZGdJlbWpxctTfNS2mjtynyxpfXyQp"
-twitter3 = twitter_T('t_user3', ckey3, csecret3, atoken3, asecret3)
-my_twitter.append(twitter3)
-
-ckey4 = "S5Rga6CAX6KyiHki7UsxCqzxj"
-csecret4 = "j7NBQHHSDGUgLif795UiBq6cpCFiOVjeDbn4D6EArtolKXgpod"
-atoken4 = "2509388425-ijsseTtnXXnt6SqGy0PhVTGOZgjFkA9GCFX4dY6"
-asecret4 = "qXGpDyGYl4W5VNLfjKvrV47vfAHx41p0Xk143ir6EAt1j"
-twitter4 = twitter_T('t_user4', ckey4, csecret4, atoken4, asecret4)
-my_twitter.append(twitter4)
-
-ckey5 = "MkzQu5X3j1WSLGnggcmq7DYzi"
-csecret5 = "5zzM5rISHOO8H6q1HxqrcOzpXjHoap0ax2mgQk6JcNZtMvDpDU"
-atoken5 = "3688208117-2zXF1SuaXAh7uhoDdPcQGCC73EE2woEjhLxFp76"
-asecret5 = "9oMNO5ySUC5IXw1wKqK4RvmUrtJ48KdbYoni9I3dKFqx6"
-twitter5 = twitter_T('t_user5', ckey5, csecret5, atoken5, asecret5)
-my_twitter.append(twitter5)
 
 client_user = MongoClient()
 db_user = pymongo.database.Database(client_user, "test")
@@ -151,9 +121,12 @@ def main():
     tweet_db = pymongo.database.Database(tweet_client, "test")
     tweet_collection = pymongo.collection.Collection(tweet_db, "tweet_NYC")
 
-    cursors = tweet_collection.parallel_scan(6)
+    twitter_init(my_twitter)
+    parallel_num = len(my_twitter)
+    cursors = tweet_collection.parallel_scan(parallel_num)
     threads = []
-    for i in range(6):
+
+    for i in range(parallel_num):
         threads.append(threading.Thread(target=process_cursor, args=(cursors[i], my_twitter[i],)))
 
     print "Start..."
