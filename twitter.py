@@ -12,70 +12,91 @@ import collections
 from bson.codec_options import CodecOptions
 import threading
 import csv
+import logging
+
+logger = logging.getLogger('test_log')
+logger.setLevel(logging.INFO)
+
+fh = logging.FileHandler('test.log', mode='a')
+fh.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(asctime)s - %(levelname)s : %(message)s')
+fh.setFormatter(formatter)
+
+logger.addHandler(fh)
 
 class twitter_T:
 	def __init__(self, name, ckey, csecret, atoken, asecret):
-		self.name = name
+	    self.name = name
 		
-		self.ckey = ckey
-		self.csecret = csecret
-		self.atoken = atoken
-		self.asecret = asecret
+	    self.ckey = ckey
+	    self.csecret = csecret
+	    self.atoken = atoken
+	    self.asecret = asecret
 		
-		#init the api handler
-		auth = tweepy.OAuthHandler(self.ckey, self.csecret)
-		auth.set_access_token(self.atoken, self.asecret)
-		self.t_api = tweepy.API(auth_handler=auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
+	    #init the api handler
+	    auth = tweepy.OAuthHandler(self.ckey, self.csecret)
+	    auth.set_access_token(self.atoken, self.asecret)
+	    self.t_api = tweepy.API(auth_handler=auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
 	#def __del__(self):
 	#	twitter_T.twitter_cnt -= 1
 
 	def twitter_DB(self, db, collection):
-		client = MongoClient()
-		self.db = pymongo.database.Database(client, db)
-		self.collection = pymongo.collection.Collection(self.db, collection)
+	    client = MongoClient()
+	    self.db = pymongo.database.Database(client, db)
+	    self.collection = pymongo.collection.Collection(self.db, collection)
 	
 	def followers_lst(self, user_id):
-		lst = []
-		tmp = tweepy.Cursor(self.t_api.followers_ids, user_id).pages()
-		while True:
-			try:
-			    page = tmp.next()
-			    lst.extend(page)
+	    lst = []
+	    tmp = tweepy.Cursor(self.t_api.followers_ids, user_id).pages()
+	    while True:
+		try:
+                    page = tmp.next()
+                    lst.extend(page)
                         #the user not auth us to extract his relationship or he does not follow anyone....
-			except tweepy.TweepError as e:
-                            if e.response.status_code == 401:
-                                return None
-                            elif e.response.status_code == 404:
-                                return []
-                            else:
-                                print "Error in followers_lst: ", e.reason
-                                time.sleep(60)
-                                continue
-			except StopIteration:
-			    break
-		
-		return lst
+		except tweepy.TweepError as e:
+                    logger.warn(e)
+
+                    if e.response.status_code == 401:
+                        logger.info('user %d not authorized', user_id)
+                        return None
+                    elif e.response.status_code == 404:
+                        logger.info('user %d has no followers', user_id)
+                        return []
+                    else:
+                        logger.error(e.reason)
+                        time.sleep(60)
+                        continue
+		except StopIteration:
+		    break
+                
+            return lst
 	
 	def friends_lst(self, user_id):
-		lst = []
-		tmp = tweepy.Cursor(self.t_api.friends_ids, user_id).pages()
-		while True:
-			try:
-			    page = tmp.next()
-			    lst.extend(page)
-			except tweepy.TweepError as e:
-                            if e.response.status_code == 401:
-                                return None
-                            elif e.response.status_code == 404:
-                                return []
-                            else:
-                                print "Error in friends_lst: ", e.reason
-                                time.sleep(60)
-                                continue
-			except StopIteration:
-			    break
-		return lst
+	    lst = []
+	    tmp = tweepy.Cursor(self.t_api.friends_ids, user_id).pages()
+	    while True:
+		try:
+		    page = tmp.next()
+		    lst.extend(page)
+		except tweepy.TweepError as e:
+                    logger.warn(e)
+
+                    if e.response.status_code == 401:
+                        logger.info('user %d not authorized', user_id)
+                        return None
+                    elif e.response.status_code == 404:
+                        logger.info('user %d has no friends', user_id)
+                        return []
+                    else:
+                        logger.error(e.reason)
+                        time.sleep(60)
+                        continue
+		except StopIteration:
+		    break
+	    
+            return lst
 
 def twitter_init(lst):
     with open("auth_info.csv") as fp:
@@ -108,6 +129,7 @@ def process_document(document, twitter_h):
         res = collection_user.find_one({'user_id':user_id})
 
     if res is not None:
+        logger.debug('find a duplicated docmentation')
         return
 
     lst_fo = twitter_h.followers_lst(user_id)
@@ -121,6 +143,7 @@ def process_document(document, twitter_h):
     with db_lock:
         res = collection_user.find_one({'user_id':user_id})
         if res is None:
+            logger.debug('insert a new docmentation')
             collection_user.insert_one(new_doc)
 
 def process_cursor(cursor, twitter_h):
