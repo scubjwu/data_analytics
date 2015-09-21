@@ -44,8 +44,14 @@ class twitter_T:
 			    lst.extend(page)
                         #the user not auth us to extract his relationship or he does not follow anyone....
 			except tweepy.TweepError as e:
-                            print "Error in followers_lst: ", e.reason
-                            return [] 
+                            if e.response.status_code == 401:
+                                return None
+                            elif e.response.status_code == 404:
+                                return []
+                            else:
+                                print "Error in followers_lst: ", e.reason
+                                time.sleep(60)
+                                continue
 			except StopIteration:
 			    break
 		
@@ -59,8 +65,14 @@ class twitter_T:
 			    page = tmp.next()
 			    lst.extend(page)
 			except tweepy.TweepError as e:
-                            print "Error in friends_lst: ", e.reason
-                            return []
+                            if e.response.status_code == 401:
+                                return None
+                            elif e.response.status_code == 404:
+                                return []
+                            else:
+                                print "Error in friends_lst: ", e.reason
+                                time.sleep(60)
+                                continue
 			except StopIteration:
 			    break
 		return lst
@@ -109,7 +121,6 @@ def process_document(document, twitter_h):
     with db_lock:
         res = collection_user.find_one({'user_id':user_id})
         if res is None:
-            print "insert a new doc..."
             collection_user.insert_one(new_doc)
 
 def process_cursor(cursor, twitter_h):
