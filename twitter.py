@@ -56,18 +56,24 @@ class twitter_T:
                     lst.extend(page)
                         #the user not auth us to extract his relationship or he does not follow anyone....
 		except tweepy.TweepError as e:
-                    logger.warn(e)
-
-                    if e.response.status_code == 401:
-                        logger.info('user %d not authorized', user_id)
-                        return None
-                    elif e.response.status_code == 404:
-                        logger.info('user %d has no followers', user_id)
-                        return []
-                    else:
-                        logger.error(e.reason)
+                    if 'Failed to send request' in str(e):
+                        logger.error(e)
                         time.sleep(60)
                         continue
+                    else:
+                        logger.warn(e)
+
+                        if e.response.status_code == 401:
+                            logger.info('user %d not authorized', user_id)
+                            return None
+                        elif e.response.status_code == 404:
+                            logger.info('user %d has no followers', user_id)
+                            return []
+                        else:
+                            logger.error(e.reason)
+                            time.sleep(60)
+                            continue
+
 		except StopIteration:
 		    break
                 
@@ -81,18 +87,24 @@ class twitter_T:
 		    page = tmp.next()
 		    lst.extend(page)
 		except tweepy.TweepError as e:
-                    logger.warn(e)
-
-                    if e.response.status_code == 401:
-                        logger.info('user %d not authorized', user_id)
-                        return None
-                    elif e.response.status_code == 404:
-                        logger.info('user %d has no friends', user_id)
-                        return []
-                    else:
-                        logger.error(e.reason)
+                    if 'Failed to send request' in str(e):
+                        logger.error(e)
                         time.sleep(60)
                         continue
+                    else:
+                        logger.warn(e)
+
+                        if e.response.status_code == 401:
+                            logger.info('user %d not authorized', user_id)
+                            return None
+                        elif e.response.status_code == 404:
+                            logger.info('user %d has no friends', user_id)
+                            return []
+                        else:
+                            logger.error(e.reason)
+                            time.sleep(60)
+                            continue
+
 		except StopIteration:
 		    break
 	    
