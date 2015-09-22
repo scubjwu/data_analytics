@@ -20,7 +20,7 @@ logger.setLevel(logging.INFO)
 fh = logging.FileHandler('test.log', mode='a')
 fh.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter('%(asctime)s - %(levelname)s : %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s : %(message)s @ %(thread)d')
 fh.setFormatter(formatter)
 
 logger.addHandler(fh)
@@ -58,7 +58,7 @@ class twitter_T:
 		except tweepy.TweepError as e:
                     if 'Failed to send request' in str(e):
                         logger.error(e)
-                        time.sleep(60)
+                        time.sleep(30)
                         continue
                     else:
                         logger.warn(e)
@@ -71,7 +71,7 @@ class twitter_T:
                             return []
                         else:
                             logger.error(e.reason)
-                            time.sleep(60)
+                            time.sleep(30)
                             continue
 
 		except StopIteration:
@@ -89,7 +89,7 @@ class twitter_T:
 		except tweepy.TweepError as e:
                     if 'Failed to send request' in str(e):
                         logger.error(e)
-                        time.sleep(60)
+                        time.sleep(30)
                         continue
                     else:
                         logger.warn(e)
@@ -102,7 +102,7 @@ class twitter_T:
                             return []
                         else:
                             logger.error(e.reason)
-                            time.sleep(60)
+                            time.sleep(30)
                             continue
 
 		except StopIteration:
@@ -170,9 +170,12 @@ def main():
     twitter_init(my_twitter)
     parallel_num = len(my_twitter)
     cursors = tweet_collection.parallel_scan(parallel_num)
+    #cursors = tweet_collection.parallel_scan(4)
     threads = []
 
     for i in range(parallel_num):
+    #for i in range(4):
+        print 'new thread created...'
         threads.append(threading.Thread(target=process_cursor, args=(cursors[i], my_twitter[i],)))
 
     print "Start..."
