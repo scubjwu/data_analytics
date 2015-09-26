@@ -13,6 +13,6 @@ var cursor = col.find();
 while(cursor.hasNext()) {
 	var doc = cursor.next();
 	var coor = doc.place.bounding_box.coordinates[0];
-	col.update({_id : doc._id}, {$set : {"loc_point" : [(coor[0][0] + coor[2][0])/2, (coor[0][1] + coor[2][1])/2]}});
+	col.update({_id : doc._id}, {$set : {"loc_point" : {"type": "Point", "coordinates": [(coor[0][0] + coor[2][0])/2, (coor[0][1] + coor[2][1])/2]}}});
 }
 
